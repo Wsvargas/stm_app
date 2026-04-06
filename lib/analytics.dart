@@ -25,7 +25,7 @@ class AnalyticsPage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // You can add an optional action button here
+                  
                 ],
               ),
               const SizedBox(height: 20),

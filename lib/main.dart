@@ -1,30 +1,55 @@
 import 'package:flutter/material.dart';
-import 'group.dart';
-import 'analytics.dart';
+import '../../group.dart';
+import '../../analytics.dart';
+import'/settings.dart';
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
+
 void main() {
   runApp(const MyApp());
 }
 
 // Main App
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Student Task Management',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: const Color(0xFF4A7BFF),
-        scaffoldBackgroundColor: const Color(0xFF000000),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white),
-          bodyMedium: TextStyle(color: Colors.white70),
-          titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-      home: const LoginPage(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, ThemeMode currentMode, __) {
+        return MaterialApp(
+          title: 'Student Task Management',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.light,
+            primaryColor: const Color.fromARGB(255, 74, 149, 255),
+            scaffoldBackgroundColor: Colors.white,
+            textTheme: const TextTheme(
+              bodyLarge: TextStyle(color: Colors.black),
+              bodyMedium: TextStyle(color: Colors.black87),
+              titleMedium: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: const Color.fromARGB(255, 74, 149, 255),
+            scaffoldBackgroundColor: const Color(0xFF000000),
+            textTheme: const TextTheme(
+              bodyLarge: TextStyle(color: Colors.white),
+              bodyMedium: TextStyle(color: Colors.white70),
+              titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+          themeMode: currentMode,
+          home: const LoginPage(),
+        );
+      },
     );
   }
 }
@@ -40,6 +65,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  String selectedRole = 'Student'; // Track selected role
+
   void _login() {
     String email = emailController.text.trim();
     String password = passwordController.text;
@@ -51,12 +78,26 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Example validation: only allow a demo account
-    if (email == "CIHEstudentID@CIHE.edu" && password == "123456") {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
+    // Example validation based on role
+    bool isValid = false;
+    if (selectedRole == 'Student' && email == "CIHEstudentID@CIHE.edu" && password == "123456") {
+      isValid = true;
+    } else if (selectedRole == 'Lecturer' && email == "lecturer@CIHE.edu" && password == "123456") {
+      isValid = true;
+    }
+
+    if (isValid) {
+      if (selectedRole == 'Student') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LecturerPage()),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid email or password')),
@@ -85,6 +126,38 @@ class _LoginPageState extends State<LoginPage> {
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
+            // Role Selection Dropdown
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F0F0F),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: const Color(0xFF3A3A3A)),
+              ),
+              child: DropdownButton<String>(
+                value: selectedRole,
+                isExpanded: true,
+                underline: const SizedBox(),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                dropdownColor: const Color(0xFF1A1A1A),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'Student',
+                    child: Text('Student'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Lecturer',
+                    child: Text('Lecturer'),
+                  ),
+                ],
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedRole = newValue!;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
             TextField(
               controller: emailController,
               decoration: const InputDecoration(
@@ -165,7 +238,7 @@ class _HomePageState extends State<HomePage> {
     TasksPage(),
     GroupsPage(),
     AnalyticsPage(),
-    Center(child: Text('Settings Page', style: TextStyle(color: Colors.white))),
+    Settings(),
   ];
 
   void _onItemTapped(int index) {
@@ -595,6 +668,363 @@ class _TasksPageState extends State<TasksPage> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+// Lecturer Page
+class LecturerPage extends StatefulWidget {
+  const LecturerPage({super.key});
+
+  @override
+  State<LecturerPage> createState() => _LecturerPageState();
+}
+
+class _LecturerPageState extends State<LecturerPage> {
+  final List<Map<String, dynamic>> _assignments = [
+    {
+      'id': 1,
+      'title': 'Flutter Basics Assignment',
+      'description': 'Create a simple counter app',
+      'dueDate': '2026-04-15',
+      'totalMarks': 100
+    },
+  ];
+
+  void _addAssignment() {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+    TextEditingController dueDateController = TextEditingController();
+    TextEditingController marksController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text(
+            'Add New Assignment',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Assignment Title',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descriptionController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Description',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: dueDateController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Due Date (YYYY-MM-DD)',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: marksController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Total Marks',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isNotEmpty &&
+                    descriptionController.text.isNotEmpty &&
+                    dueDateController.text.isNotEmpty &&
+                    marksController.text.isNotEmpty) {
+                  setState(() {
+                    _assignments.add({
+                      'id': DateTime.now().millisecondsSinceEpoch,
+                      'title': titleController.text,
+                      'description': descriptionController.text,
+                      'dueDate': dueDateController.text,
+                      'totalMarks': int.parse(marksController.text),
+                    });
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Assignment added successfully')),
+                  );
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editAssignment(int index) {
+    var assignment = _assignments[index];
+    TextEditingController titleController = TextEditingController(text: assignment['title']);
+    TextEditingController descriptionController = TextEditingController(text: assignment['description']);
+    TextEditingController dueDateController = TextEditingController(text: assignment['dueDate']);
+    TextEditingController marksController = TextEditingController(text: assignment['totalMarks'].toString());
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text(
+            'Edit Assignment',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Assignment Title',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descriptionController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Description',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: dueDateController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Due Date (YYYY-MM-DD)',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: marksController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Total Marks',
+                    hintStyle: TextStyle(color: Colors.white54),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isNotEmpty) {
+                  setState(() {
+                    _assignments[index] = {
+                      'id': assignment['id'],
+                      'title': titleController.text,
+                      'description': descriptionController.text,
+                      'dueDate': dueDateController.text,
+                      'totalMarks': int.parse(marksController.text),
+                    };
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Assignment updated successfully')),
+                  );
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteAssignment(int index) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text(
+            'Delete Assignment',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to delete this assignment?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                setState(() {
+                  _assignments.removeAt(index);
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Assignment deleted')),
+                );
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Manage Assignments'),
+        backgroundColor: const Color(0xFF000000),
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: _assignments.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.assignment, size: 64, color: Colors.white30),
+                  SizedBox(height: 16),
+                  Text(
+                    'No assignments yet',
+                    style: TextStyle(color: Colors.white70, fontSize: 18),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _assignments.length,
+              itemBuilder: (context, index) {
+                var assignment = _assignments[index];
+                return Card(
+                  color: const Color(0xFF1A1A1A),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    assignment['title'],
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    assignment['description'],
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Color(0xFF4A7BFF)),
+                                  onPressed: () => _editAssignment(index),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deleteAssignment(index),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Due: ${assignment['dueDate']}',
+                              style: const TextStyle(color: Colors.white54),
+                            ),
+                            Text(
+                              'Marks: ${assignment['totalMarks']}',
+                              style: const TextStyle(color: Colors.white54),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF4A7BFF),
+        onPressed: _addAssignment,
+        child: const Icon(Icons.add),
       ),
     );
   }
