@@ -95,17 +95,16 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 // ── Stats ─────────────────────────────────
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    StatCard(
+                    Expanded(child: StatCard(
                         label: 'Tasks Done',
-                        value: '$done/${tasks.length}'),
-                    StatCard(
+                        value: '$done/${tasks.length}')),
+                    Expanded(child: StatCard(
                         label: 'Study Hours',
-                        value: '${totalHours.toStringAsFixed(1)}h'),
-                    StatCard(
+                        value: '${totalHours.toStringAsFixed(1)}h')),
+                    Expanded(child: StatCard(
                         label: 'Pending',
-                        value: '${tasks.length - done}'),
+                        value: '${tasks.length - done}')),
                   ],
                 ),
                 const SizedBox(height: 20),
