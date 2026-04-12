@@ -1,189 +1,399 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'data.dart';
+import 'services/task_service.dart';
+import 'study.dart';
 
-class AnalyticsPage extends StatelessWidget {
+class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
 
   @override
+  State<AnalyticsPage> createState() => _AnalyticsPageState();
+}
+
+class _AnalyticsPageState extends State<AnalyticsPage> {
+  @override
+  void initState() {
+    super.initState();
+    TaskService.instance.load();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black, // background color for the page
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // AppBar replacement
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Analytics',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+    return ListenableBuilder(
+      listenable: TaskService.instance,
+      builder: (context, _) {
+        final tasks = TaskService.instance.tasks;
+        final total = tasks.length;
+        final done = tasks.where((t) => t.isDone).length;
+        final pending = total - done;
+        final highPriority =
+            tasks.where((t) => t.priority == 'High' && !t.isDone).length;
+        final studyHours = totalStudySeconds / 3600;
+        final completionRate =
+            total == 0 ? 0.0 : (done / total * 100);
+
+        // Priority breakdown for bar chart
+        final highCount = tasks.where((t) => t.priority == 'High').length;
+        final medCount = tasks.where((t) => t.priority == 'Medium').length;
+        final lowCount = tasks.where((t) => t.priority == 'Low').length;
+
+        return Container(
+          color: Colors.black,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Header ──────────────────────────────
+                  const Text('Analytics',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text('Your academic performance overview',
+                      style:
+                          TextStyle(color: Colors.white54, fontSize: 13)),
+                  const SizedBox(height: 20),
+
+                  // ── Summary cards ────────────────────────
+                  Row(
+                    children: [
+                      _statCard('Tasks Done', '$done/$total',
+                          const Color(0xFF4A7BFF), Icons.task_alt),
+                      const SizedBox(width: 10),
+                      _statCard(
+                          'Study Time',
+                          '${studyHours.toStringAsFixed(1)}h',
+                          Colors.green,
+                          Icons.timer,
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const StudyPage()))),
+                      const SizedBox(width: 10),
+                      _statCard('Urgent', '$highPriority', Colors.red,
+                          Icons.priority_high),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _statCard(
+                          'Completion',
+                          '${completionRate.toStringAsFixed(0)}%',
+                          Colors.orange,
+                          Icons.pie_chart),
+                      const SizedBox(width: 10),
+                      _statCard('Pending', '$pending',
+                          const Color(0xFFFFAA00), Icons.pending_actions),
+                      const SizedBox(width: 10),
+                      _statCard(
+                          'Focus Time',
+                          '${(totalStudySeconds / 60).toStringAsFixed(0)}m',
+                          const Color(0xFFDE90FE),
+                          Icons.self_improvement),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Task Status Pie Chart ─────────────────
+                  const Text('Task Status',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 260,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C1C1E),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: total == 0
+                        ? const Center(
+                            child: Text('No tasks yet',
+                                style: TextStyle(color: Colors.white38)))
+                        : Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: PieChart(
+                                  PieChartData(
+                                    sections: [
+                                      PieChartSectionData(
+                                        value: done.toDouble(),
+                                        title: done > 0
+                                            ? '${(done / total * 100).toStringAsFixed(0)}%'
+                                            : '',
+                                        color: Colors.green,
+                                        radius: 70,
+                                        titleStyle: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      PieChartSectionData(
+                                        value: pending.toDouble(),
+                                        title: pending > 0
+                                            ? '${(pending / total * 100).toStringAsFixed(0)}%'
+                                            : '',
+                                        color: const Color(0xFF4A7BFF),
+                                        radius: 70,
+                                        titleStyle: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                    sectionsSpace: 3,
+                                    centerSpaceRadius: 45,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    _legend(
+                                        Colors.green, 'Completed', done),
+                                    const SizedBox(height: 12),
+                                    _legend(const Color(0xFF4A7BFF),
+                                        'Pending', pending),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      'Total: $total tasks',
+                                      style: const TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Priority Bar Chart ────────────────────
+                  const Text('Tasks by Priority',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C1C1E),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                    child: total == 0
+                        ? const Center(
+                            child: Text('No tasks yet',
+                                style: TextStyle(color: Colors.white38)))
+                        : BarChart(
+                            BarChartData(
+                              alignment: BarChartAlignment.spaceAround,
+                              maxY: (([highCount, medCount, lowCount]
+                                              ..sort())
+                                          .last +
+                                      2)
+                                  .toDouble(),
+                              barTouchData:
+                                  BarTouchData(enabled: false),
+                              titlesData: FlTitlesData(
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 28,
+                                    getTitlesWidget: (val, _) => Text(
+                                      val.toInt().toString(),
+                                      style: const TextStyle(
+                                          color: Colors.white38,
+                                          fontSize: 11),
+                                    ),
+                                  ),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    getTitlesWidget: (val, _) {
+                                      const labels = [
+                                        'High',
+                                        'Medium',
+                                        'Low'
+                                      ];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 6),
+                                        child: Text(
+                                          labels[val.toInt()],
+                                          style: const TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 11),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                topTitles: const AxisTitles(
+                                    sideTitles:
+                                        SideTitles(showTitles: false)),
+                                rightTitles: const AxisTitles(
+                                    sideTitles:
+                                        SideTitles(showTitles: false)),
+                              ),
+                              gridData: FlGridData(
+                                show: true,
+                                getDrawingHorizontalLine: (_) => const FlLine(
+                                    color: Colors.white10, strokeWidth: 1),
+                                drawVerticalLine: false,
+                              ),
+                              borderData: FlBorderData(show: false),
+                              barGroups: [
+                                _bar(0, highCount.toDouble(),
+                                    const Color(0xFFFF4444)),
+                                _bar(1, medCount.toDouble(),
+                                    const Color(0xFFFFAA00)),
+                                _bar(2, lowCount.toDouble(),
+                                    const Color(0xFF4A7BFF)),
+                              ],
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Study time card ───────────────────────
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const StudyPage())),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6C3FD0), Color(0xFF4A7BFF)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.self_improvement,
+                              color: Colors.white, size: 40),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Study With Me',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Total: ${studyHours.toStringAsFixed(1)} hours studied',
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right,
+                              color: Colors.white70),
+                        ],
+                      ),
                     ),
                   ),
-                  
+                  const SizedBox(height: 16),
                 ],
               ),
-              const SizedBox(height: 20),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
-              const Text(
-                "Performance Stats",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+  // ── Helpers ─────────────────────────────────────────────────────────────────
 
-              // Stats row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  AnalyticsCard(
-                    label: 'Tasks Completed',
-                    value: '8/12',
-                    color: Colors.blue,
-                  ),
-                  AnalyticsCard(
-                    label: 'Study Hours',
-                    value: '15h',
-                    color: Colors.green,
-                  ),
-                  AnalyticsCard(
-                    label: 'Units Completed',
-                    value: '5/6',
-                    color: Colors.orange,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Graph placeholder
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Center(
-                  child: Text(
-                    '📊 Graph Placeholder',
-                    style: TextStyle(color: Colors.white54),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                "Recent Activity",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-
-              const ActivityCard(
-                title: 'Completed ICT306 Assignment',
-                subtitle: '2 hours ago',
-              ),
-              const ActivityCard(
-                title: 'Attended Group Study ICT305',
-                subtitle: 'Yesterday',
-              ),
-              const ActivityCard(
-                title: 'Submitted Project ICT309',
-                subtitle: '3 days ago',
-              ),
+  Widget _statCard(String label, String value, Color color, IconData icon,
+      {VoidCallback? onTap}) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1C1C1E),
+            borderRadius: BorderRadius.circular(14),
+            border: onTap != null
+                ? Border.all(color: color.withValues(alpha: 0.3))
+                : null,
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 6),
+              Text(value,
+                  style: TextStyle(
+                      color: color,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white54, fontSize: 10),
+                  textAlign: TextAlign.center),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-// Single stat card
-class AnalyticsCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const AnalyticsCard(
-      {super.key, required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+  Widget _legend(Color color, String label, int count) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('$label ($count)',
+              style:
+                  const TextStyle(color: Colors.white70, fontSize: 13)),
+        ),
+      ],
     );
   }
-}
 
-// Recent activity card
-class ActivityCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const ActivityCard({super.key, required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_outline, color: Colors.blue),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: Colors.grey)),
-              ],
-            ),
-          )
-        ],
-      ),
+  BarChartGroupData _bar(int x, double y, Color color) {
+    return BarChartGroupData(
+      x: x,
+      barRods: [
+        BarChartRodData(
+          toY: y,
+          color: color,
+          width: 28,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+        ),
+      ],
     );
   }
 }

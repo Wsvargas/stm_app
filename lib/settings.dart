@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:stm_app/main.dart';
+import 'theme.dart';
+import 'pages/login_page.dart';
 
 
 class Settings extends StatefulWidget {
