@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/task_model.dart';
 import '../services/task_service.dart';
-import 'add_event_page.dart';
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -24,25 +22,10 @@ class _TasksPageState extends State<TasksPage> {
     TaskService.instance.load();
   }
 
-  Future<void> _openAdd() async {
-    final result = await Navigator.push<Map<String, String>>(
-      context,
-      MaterialPageRoute(
-          builder: (_) => AddEventPage(initialDate: DateTime.now())),
+  void _openAdd() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tasks are assigned by your lecturer.')),
     );
-    if (result == null || result['title']!.isEmpty) return;
-    final task = Task(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: result['title']!,
-      description: result['description'] ?? '',
-      priority: result['priority'] ?? 'Medium',
-      category: result['category'] ?? 'Task',
-      subject: result['subject'] ?? '',
-      time: result['time'] ?? '',
-      dueDate: result['date'] != null ? DateTime.tryParse(result['date']!) : null,
-      estimatedHours: double.tryParse(result['estimatedHours'] ?? '1.0') ?? 1.0,
-    );
-    await TaskService.instance.add(task);
   }
 
   @override

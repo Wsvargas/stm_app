@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
 import '../services/task_service.dart';
-import 'add_event_page.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -39,26 +38,10 @@ class _CalendarPageState extends State<CalendarPage> {
   void _nextMonth() => setState(() =>
       _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1));
 
-  Future<void> _openAddEvent(DateTime day) async {
-    final result = await Navigator.push<Map<String, String>>(
-      context,
-      MaterialPageRoute(builder: (_) => AddEventPage(initialDate: day)),
+  void _openAddEvent(DateTime day) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tasks are assigned by your lecturer.')),
     );
-    if (result == null || result['title']!.isEmpty) return;
-
-    final task = Task(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: result['title']!,
-      description: result['description'] ?? '',
-      priority: result['priority'] ?? 'Medium',
-      category: result['category'] ?? 'Task',
-      subject: result['subject'] ?? '',
-      time: result['time'] ?? '',
-      dueDate: result['date'] != null ? DateTime.tryParse(result['date']!) : day,
-      estimatedHours: double.tryParse(result['estimatedHours'] ?? '1.0') ?? 1.0,
-    );
-    await TaskService.instance.add(task);
-    setState(() {});
   }
 
   Widget _buildCalendarGrid() {

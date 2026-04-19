@@ -1,8 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/task_service.dart';
+import '../services/units_service.dart';
+import '../services/groups_service.dart';
 import 'home_page.dart';
-import 'lecturer_page.dart';
+import 'lecturer_dashboard_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -35,8 +38,9 @@ class _LoginPageState extends State<LoginPage> {
     }
     setState(() => _loading = true);
     try {
-      final result = await AuthService.instance.signIn(email, pass);
-      _navigate(result.role);
+      final user = await AuthService.instance.signIn(email, pass);
+      await _loadData();
+      _navigate(user.role);
     } on FirebaseAuthException catch (e) {
       _snack(_friendlyError(e.code));
     } catch (e) {
@@ -49,8 +53,9 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _loginWithGoogle() async {
     setState(() => _loadingGoogle = true);
     try {
-      final result = await AuthService.instance.signInWithGoogle();
-      _navigate(result.role);
+      final user = await AuthService.instance.signInWithGoogle();
+      await _loadData();
+      _navigate(user.role);
     } on FirebaseAuthException catch (e) {
       _snack(_friendlyError(e.code));
     } catch (e) {
@@ -60,13 +65,21 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _loadData() async {
+    await Future.wait([
+      TaskService.instance.load(),
+      UnitsService.instance.loadAll(),
+      GroupsService.instance.load(),
+    ]);
+  }
+
   void _navigate(UserRole role) {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) =>
-            role == UserRole.lecturer ? const LecturerPage() : const HomePage(),
+            role == UserRole.lecturer ? const LecturerDashboardPage() : const HomePage(),
       ),
     );
   }
