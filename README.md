@@ -138,6 +138,8 @@ Role is determined automatically by email:
 
 - **Flutter** 3.6+
 - **Firebase Auth** — authentication
+-  **Firestore** — DB
 - **SQLite** (`sqflite`) — local task storage
 - **fl_chart** — analytics charts
 - **google_sign_in** — Google OAuth (web & mobile)
+- 
